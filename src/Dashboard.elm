@@ -3,11 +3,12 @@ module Dashboard exposing (main)
 import Arborist.Tree as Tree
 import Browser
 import Browser.Dom
+import Dashboard.Ast as Ast
+import Dashboard.Pos as Pos
+import Dashboard.Range as Range
 import Elm.Parser
 import Elm.Processing
-import Elm.Syntax.Declaration
 import Elm.Syntax.File
-import Elm.Syntax.Node
 import Html
 import Html.Attributes as HA
 import Html.Events as HE
@@ -42,40 +43,8 @@ type alias Model =
             { width : Int
             , height : Int
             }
-    , selectedRange : Maybe Range
+    , selectedNode : Maybe Ast.Node
     }
-
-
-type alias Pos =
-    { row : Int
-    , column : Int
-    }
-
-
-type alias Range =
-    { start : Pos
-    , end : Pos
-    }
-
-
-insideRange : Range -> Pos -> Bool
-insideRange range pos =
-    pos.row
-        <= range.end.row
-        && pos.row
-        >= range.start.row
-        && (if pos.row == range.start.row then
-                pos.column >= range.start.column
-
-            else
-                True
-           )
-        && (if pos.row == range.end.row then
-                pos.column <= range.end.column
-
-            else
-                True
-           )
 
 
 type alias Flags =
@@ -86,7 +55,7 @@ init : Flags -> ( Model, Cmd Msg )
 init _ =
     ( { elmFile = Nothing
       , windowSize = Nothing
-      , selectedRange = Nothing
+      , selectedNode = Nothing
       }
     , Cmd.batch
         [ fetchFile ReceiveFile
@@ -108,9 +77,11 @@ init _ =
 
 type Msg
     = ReceiveFile (Result Http.Error String)
-    | WindowSize { width : Int, height : Int }
-    | SelectRange Range
-    | NoOp
+    | WindowSize
+        { width : Int
+        , height : Int
+        }
+    | SelectNode (Maybe Ast.Node)
 
 
 
@@ -134,13 +105,8 @@ update msg model =
             , Cmd.none
             )
 
-        SelectRange range ->
-            ( { model | selectedRange = Just range }
-            , Cmd.none
-            )
-
-        NoOp ->
-            ( model
+        SelectNode range ->
+            ( { model | selectedNode = range }
             , Cmd.none
             )
 
@@ -149,7 +115,9 @@ view : Model -> Html.Html Msg
 view model =
     case model.elmFile of
         Nothing ->
-            Html.text "Loading..."
+            Html.div [ HA.class "container" ]
+                [ Html.text "Loading..."
+                ]
 
         Just (Ok file) ->
             let
@@ -159,47 +127,65 @@ view model =
             Html.div
                 [ HA.class "container"
                 ]
-                [ viewCode
-                    { file = file
-                    , selectedRange = model.selectedRange
-                    , onClick =
-                        \pos ->
-                            processedResult
-                                |> Result.map
-                                    (\processed ->
-                                        Tree.Node
-                                            { content = "Declarations"
-                                            , range = Nothing
-                                            }
-                                            (List.map declarationTree processed.declarations)
-                                    )
-                                |> Result.withDefault Tree.Empty
-                                |> findRange pos
-                                |> Debug.log "rindrange"
-                                |> Maybe.map SelectRange
-                                |> Maybe.withDefault NoOp
-                    }
-                , Html.section
-                    [ HA.class "pad"
+                [ Html.header [ HA.class "header" ]
+                    [ Html.p
+                        [ HA.class "header-logo"
+                        ]
+                        [ Html.text "Elm Code Explorer"
+                        ]
                     ]
-                    (case processedResult of
-                        Ok processed ->
-                            [ viewTree
-                                { selectedRange = model.selectedRange
-                                , onSelectRange = SelectRange
-                                }
-                                (Tree.Node
-                                    { content = "Declarations"
+                , case processedResult of
+                    Err _ ->
+                        Html.text "Could not parse"
+
+                    Ok processed ->
+                        let
+                            tree =
+                                Tree.Node
+                                    { content = Ast.NodeContent "File" Nothing 0
                                     , range = Nothing
                                     }
-                                    (List.map declarationTree processed.declarations)
-                                )
+                                    [ Ast.moduleDeclarationTree processed.moduleDefinition
+                                    , Tree.Node
+                                        { content = Ast.NodeContent "Declarations" Nothing 0
+                                        , range = Nothing
+                                        }
+                                        (List.map Ast.declarationTree processed.declarations)
+                                    ]
+                        in
+                        Html.div
+                            [ HA.class "content"
                             ]
-
-                        Err _ ->
-                            [ Html.text "Could not parse"
+                            [ Html.section
+                                [ HA.class "pad"
+                                ]
+                                [ Html.div [ HA.class "label" ]
+                                    [ Html.text "Main.elm"
+                                    ]
+                                , viewCode
+                                    { file = file
+                                    , selectedNode = model.selectedNode
+                                    , tree = tree
+                                    , onClick =
+                                        \pos ->
+                                            tree
+                                                |> findRange pos
+                                                |> SelectNode
+                                    }
+                                ]
+                            , Html.section
+                                [ HA.class "pad"
+                                ]
+                                [ Html.div [ HA.class "label" ]
+                                    [ Html.text "AST"
+                                    ]
+                                , viewTree
+                                    { selectedNode = model.selectedNode
+                                    , onSelectNode = SelectNode
+                                    }
+                                    tree
+                                ]
                             ]
-                    )
                 ]
 
         Just (Err _) ->
@@ -207,14 +193,10 @@ view model =
 
 
 viewTree :
-    { selectedRange : Maybe Range
-    , onSelectRange : Range -> msg
+    { selectedNode : Maybe Ast.Node
+    , onSelectNode : Maybe Ast.Node -> msg
     }
-    ->
-        Tree.Tree
-            { range : Maybe Range
-            , content : String
-            }
+    -> Tree.Tree Ast.Node
     -> Html.Html msg
 viewTree config tree =
     case tree of
@@ -223,23 +205,35 @@ viewTree config tree =
 
         Tree.Node node children ->
             Html.div
-                [ HA.style "margin" "10px 0"
+                [ HA.class "node-container"
                 ]
-                [ Html.div [ HA.style "display" "flex" ]
-                    [ Html.h3
-                        [ HA.style "margin" "0 20px 0 0"
-                        , HA.style "font-size" "14px"
+                [ Html.div
+                    ([ HA.classList
+                        [ ( "node", True )
+                        , ( "node--selectable", node.range /= Nothing )
+                        , ( "type-" ++ String.fromInt (modBy 6 node.content.colorIndex), True )
+                        , ( "node--selected"
+                          , config.selectedNode
+                                /= Nothing
+                                && Maybe.andThen .range config.selectedNode
+                                == node.range
+                          )
                         ]
-                        [ Html.text node.content ]
+                        |> Just
+                     , if node.range == Nothing then
+                        Nothing
+
+                       else
+                        HE.onClick (config.onSelectNode (Just node)) |> Just
+                     ]
+                        |> List.filterMap identity
+                    )
+                    [ Html.h3
+                        [ HA.class "node-title"
+                        ]
+                        [ Html.text node.content.name ]
                     , node.range
-                        |> Maybe.map
-                            (\range ->
-                                viewRange
-                                    { range = range
-                                    , selected = config.selectedRange == Just range
-                                    , onSelect = config.onSelectRange range
-                                    }
-                            )
+                        |> Maybe.map viewRange
                         |> Maybe.withDefault (Html.text "")
                     ]
                 , Html.div
@@ -249,7 +243,10 @@ viewTree config tree =
                 ]
 
 
-findRange : Pos -> Tree.Tree { a | range : Maybe Range } -> Maybe Range
+findRange :
+    Pos.Pos
+    -> Tree.Tree Ast.Node
+    -> Maybe Ast.Node
 findRange pos tree =
     case tree of
         Tree.Empty ->
@@ -260,8 +257,8 @@ findRange pos tree =
                 nodeFind =
                     Maybe.andThen
                         (\range ->
-                            if insideRange range pos then
-                                Just range
+                            if Range.inside pos range then
+                                Just node
 
                             else
                                 Nothing
@@ -275,110 +272,14 @@ findRange pos tree =
                         |> List.head
             in
             case ( childrenFind, nodeFind ) of
-                ( Just range, _ ) ->
-                    Just range
+                ( Just foundNode, _ ) ->
+                    Just foundNode
 
-                ( _, Just range ) ->
-                    Just range
+                ( _, Just foundNode ) ->
+                    Just foundNode
 
                 _ ->
                     Nothing
-
-
-declarationTree :
-    Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration
-    ->
-        Tree.Tree
-            { range : Maybe Range
-            , content : String
-            }
-declarationTree (Elm.Syntax.Node.Node range content) =
-    case content of
-        Elm.Syntax.Declaration.FunctionDeclaration function ->
-            Tree.Node
-                { range = Just range
-                , content = "FunctionDeclaration"
-                }
-                ([ function.signature
-                    |> Maybe.map
-                        (\signatureNode ->
-                            let
-                                (Elm.Syntax.Node.Node signatureRange signature) =
-                                    signatureNode
-
-                                (Elm.Syntax.Node.Node nameRange name) =
-                                    signature.name
-                            in
-                            Tree.Node
-                                { range = Just signatureRange
-                                , content = "Signature"
-                                }
-                                [ Tree.Node
-                                    { range = Just nameRange
-                                    , content = "FunctionName: " ++ "\"" ++ name ++ "\""
-                                    }
-                                    []
-
-                                -- TODO: parse type signature
-                                ]
-                        )
-                 , let
-                    (Elm.Syntax.Node.Node implementationRange implementation) =
-                        function.declaration
-                   in
-                   Tree.Node
-                    { range = Just implementationRange
-                    , content = "Implementation"
-                    }
-                    [ let
-                        (Elm.Syntax.Node.Node expressionRange expression) =
-                            implementation.expression
-                      in
-                      Tree.Node
-                        { range = Just expressionRange
-                        , content = "Expression"
-                        }
-                        []
-                    ]
-                    |> Just
-                 ]
-                    |> List.filterMap identity
-                )
-
-        Elm.Syntax.Declaration.AliasDeclaration _ ->
-            Tree.Node
-                { range = Just range
-                , content = "AliasDeclaration"
-                }
-                []
-
-        Elm.Syntax.Declaration.CustomTypeDeclaration _ ->
-            Tree.Node
-                { range = Just range
-                , content = "CustomTypeDeclaration"
-                }
-                []
-
-        Elm.Syntax.Declaration.PortDeclaration _ ->
-            Tree.Node
-                { range = Just range
-                , content = "PortDeclaration"
-                }
-                []
-
-        Elm.Syntax.Declaration.InfixDeclaration _ ->
-            Tree.Node
-                { range = Just range
-                , content = "InfixDeclaration"
-                }
-                []
-
-        Elm.Syntax.Declaration.Destructuring _ _ ->
-            Tree.Node
-                { range = Just range
-                , content = "Destructuring"
-                }
-                []
 
 
 
@@ -406,84 +307,92 @@ process =
 
 viewCode :
     { file : String
-    , selectedRange : Maybe Range
-    , onClick : Pos -> msg
+    , selectedNode : Maybe Ast.Node
+    , tree : Tree.Tree Ast.Node
+    , onClick : Pos.Pos -> msg
     }
     -> Html.Html msg
 viewCode config =
-    Html.section
-        [ HA.class "pad"
+    Html.div
+        [ HA.class "code"
         ]
-        [ Html.div
-            [ HA.class "code"
-            ]
-            [ Html.div []
-                (config.file
-                    |> String.split "\n"
-                    |> List.indexedMap
-                        (\rowIndex line ->
-                            if line == "" then
-                                Html.pre
-                                    [ HA.class "code-line"
-                                    ]
-                                    [ Html.text " "
-                                    ]
+        [ Html.div []
+            (config.file
+                |> String.split "\n"
+                |> List.indexedMap
+                    (\rowIndex line ->
+                        if line == "" then
+                            Html.pre
+                                [ HA.class "code-line"
+                                ]
+                                [ Html.text " "
+                                ]
 
-                            else
-                                Html.pre
-                                    [ HA.class "code-line"
-                                    ]
-                                    (line
-                                        |> String.toList
-                                        |> List.indexedMap
-                                            (\columnIndex char ->
-                                                let
-                                                    currentPos =
-                                                        { row = rowIndex + 1
-                                                        , column = columnIndex + 1
-                                                        }
-                                                in
-                                                Html.span
-                                                    [ HA.classList
-                                                        [ ( "code-char", True )
-                                                        , ( "code-char--highlighted"
-                                                          , config.selectedRange
-                                                                |> Maybe.map
+                        else
+                            Html.pre
+                                [ HA.class "code-line"
+                                ]
+                                (line
+                                    |> String.toList
+                                    |> List.indexedMap
+                                        (\columnIndex char ->
+                                            let
+                                                currentPos =
+                                                    { row = rowIndex + 1
+                                                    , column = columnIndex + 1
+                                                    }
+                                            in
+                                            Html.span
+                                                [ [ [ ( "code-char", True ) ]
+                                                  , config.selectedNode
+                                                        |> Maybe.andThen
+                                                            (\node ->
+                                                                Maybe.andThen
                                                                     (\range ->
-                                                                        insideRange range currentPos
+                                                                        if Range.inside currentPos range then
+                                                                            Just node
+
+                                                                        else
+                                                                            Nothing
                                                                     )
-                                                                |> Maybe.withDefault False
-                                                          )
-                                                        ]
-                                                    , HE.onClick (config.onClick currentPos)
-                                                    ]
-                                                    [ Html.text <| String.fromChar char
-                                                    ]
-                                            )
-                                    )
-                        )
-                )
-            ]
+                                                                    node.range
+                                                            )
+                                                        |> Maybe.map
+                                                            (\selectedNode ->
+                                                                [ ( "code-char--highlighted", True )
+                                                                , ( "type-"
+                                                                        ++ String.fromInt
+                                                                            (modBy 6 selectedNode.content.colorIndex)
+                                                                  , True
+                                                                  )
+                                                                ]
+                                                            )
+                                                        |> Maybe.withDefault []
+                                                  ]
+                                                    |> List.foldl (++) []
+                                                    |> HA.classList
+                                                , HE.onClick (config.onClick currentPos)
+                                                ]
+                                                [ Html.text <| String.fromChar char
+                                                ]
+                                        )
+                                )
+                    )
+            )
         ]
 
 
-viewRange :
-    { range : Range
-    , selected : Bool
-    , onSelect : msg
-    }
-    -> Html.Html msg
-viewRange config =
+viewRange : Range.Range -> Html.Html msg
+viewRange range =
     Html.small
-        [ HA.classList [ ( "range", True ), ( "range--selected", config.selected ) ]
-        , HE.onClick config.onSelect
+        [ HA.class "range"
         ]
-        [ String.fromInt config.range.start.row
+        [ String.fromInt range.start.row
             ++ ":"
-            ++ String.fromInt config.range.start.column
+            ++ String.fromInt range.start.column
             ++ " - "
-            ++ String.fromInt config.range.end.row
+            ++ String.fromInt range.end.row
             ++ ":"
-            ++ String.fromInt config.range.end.column
+            ++ String.fromInt range.end.column
             |> Html.text
         ]

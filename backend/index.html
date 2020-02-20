@@ -1,102 +1,11 @@
 <head>
   <link href="https://fonts.googleapis.com/css?family=Fira+Sans|Fira+Code&display=swap" rel="stylesheet">
+  <link href="/static/styles.css" rel="stylesheet">
   <style>
-    * {
-      box-sizing: border-box;
-      font-family: "Fira Sans", sans-serif;
-    }
-
-    /* 2274a5-f75c03-f1c40f-d90368-00cc66 */
-
-    html,
-    body,
-    #root,
-    .container {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-    }
-
-    .container {
-      display: flex;
-    }
-
-    .pad {
-      padding: 20px;
-    }
-
-    .code,
-    .code * {
-      font-family: "Fira Code", monospace;
-    }
-
-    .code-line {
-      margin: 0;
-      line-height: 1.4;
-    }
-
-    .code-char {
-      cursor: pointer;
-    }
-
-    .code-char:hover {
-      background-color: #EFEFEF;
-    }
-
-    .code-char--highlighted {
-      color: #2274a5;
-      background-color: #F8F8F8;
-    }
-
-    .range {
-      color: #676767;
-      padding: 2px 4px;
-      border-radius: 2px;
-      background-color: #F5F5F5;
-      cursor: pointer;
-    }
-
-    .range:hover {
-      background-color: #EFEFEF;
-    }
-
-    .range--selected {
-      color: #FFF;
-      background-color: #2274a5;
-    }
-
-    .range--selected:hover {
-      background-color: #2274a5;
-    }
-
-    section {
-      width: 50%;
-      height: 100%;
-        overflow: auto;
-    }
-
-    section:not(:last-child) {
-      border-right: 1px solid #CECECE;
-    }
   </style>
 </head>
 <body>
   <div id="root"></div>
   <script src="/dashboard.js"></script>
-  <script>
-    const node = document.querySelector("#root");
-    if (window.Elm) {
-      Elm.Dashboard.init({
-        node
-      });
-    } else {
-      node.innerHTML = `
-      <div class="code">
-      <pre>
-${window.elmError}
-      </pre>
-      </div>
-      `;
-    }
-  </script>
+  <script src="/static/index.js"></script>
 </body>

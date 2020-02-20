@@ -1,0 +1,167 @@
+* {
+  box-sizing: border-box;
+  font-family: "Fira Sans", sans-serif;
+}
+
+/* 2274a5-f75c03-f1c40f-d90368-00cc66 */
+
+html,
+body,
+#root,
+.container {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.pad {
+  padding: 20px;
+}
+
+.code,
+.code * {
+  font-family: "Fira Code", monospace;
+}
+
+.code-line {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.code-char {
+  cursor: pointer;
+}
+
+.code-char:hover {
+  background-color: #efefef;
+}
+
+.code-char--highlighted {
+  color: #fff;
+  background-color: var(--nodeColor);
+}
+
+.code-char--highlighted:hover {
+  background-color: var(--nodeColor);
+}
+
+.range {
+  color: #898989;
+}
+
+section {
+  width: 50%;
+  height: 100%;
+  overflow: auto;
+}
+
+section:not(:last-child) {
+  border-right: 1px solid #dedede;
+}
+
+/* label */
+
+.label {
+  font-size: 12px;
+  background-color: #efefef;
+  border-radius: 3px;
+  padding: 4px 8px;
+  color: #787878;
+  width: fit-content;
+  margin-bottom: 20px;
+}
+
+/* header */
+
+.header {
+  height: 60px;
+  background-color: #f5f5f5;
+  color: #000;
+  border-bottom: 1px solid #dedede;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+}
+
+.header-logo {
+  font-size: 18px;
+}
+
+/* content */
+
+.content {
+  display: flex;
+  width: 100%;
+  height: calc(100% - 60px);
+}
+
+/* node-container */
+
+.type-0 {
+  --nodeColor: #343434;
+}
+
+.type-1 {
+  --nodeColor: #91243f;
+}
+
+.type-2 {
+  --nodeColor: #8c387f;
+}
+
+.type-3 {
+  --nodeColor: #3d4e99;
+}
+
+.type-4 {
+  --nodeColor: #3a96ad;
+}
+
+.type-5 {
+  --nodeColor: #c15624;
+}
+
+.node {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 6px 10px;
+  border-radius: 3px;
+}
+
+.node > *:not(:last-child) {
+  margin-right: 15px;
+}
+
+.node-title {
+  color: var(--nodeColor);
+  font-size: 14px;
+  margin: 0;
+}
+
+.node--selectable {
+  cursor: pointer;
+}
+
+.node--selectable:hover {
+  background-color: #f1f1f1;
+}
+
+.node--selected {
+  background-color: var(--nodeColor);
+}
+
+.node--selected .node-title,
+.node--selected .range {
+  color: #fff;
+}
+
+.node--selected:hover {
+  background-color: var(--nodeColor);
+}
+
+/* node-container */
+
+.node-container {
+  margin-top: 6px;
+}

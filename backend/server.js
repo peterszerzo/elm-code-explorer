@@ -31,6 +31,16 @@ app.get("/dashboard.js", (req, res) => {
   );
 });
 
+app.get("/static/:file", (req, res) => {
+  fs.readFile(
+    path.join(__dirname, "static", req.params.file),
+    "utf8",
+    (err, file) => {
+      res.send(file);
+    }
+  );
+});
+
 app.get("/file", (req, res) => {
   fs.readFile(path.join(__dirname, "../src/Main.elm"), "utf8", (err, file) => {
     res.send(file);

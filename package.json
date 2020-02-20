@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node backend/index.js",
+    "start": "node backend/server.js",
     "postinstall": "rm -rf tmp && mkdir tmp"
   },
   "author": "Erkal Selman, Peter Szerzo",
