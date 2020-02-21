@@ -41,7 +41,7 @@ app.get("/static/:file", (req, res) => {
   );
 });
 
-app.get("/file", (req, res) => {
+app.get("/Main.elm", (req, res) => {
   fs.readFile(path.join(__dirname, "../src/Main.elm"), "utf8", (err, file) => {
     res.send(file);
   });

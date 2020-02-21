@@ -83,8 +83,9 @@ section:not(:last-child) {
   align-items: center;
 }
 
-.header-logo {
+.header-title {
   font-size: 18px;
+  margin-left: 10px;
 }
 
 /* content */

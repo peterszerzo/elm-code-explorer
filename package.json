@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node backend/server.js",
-    "postinstall": "rm -rf tmp && mkdir tmp"
+    "postinstall": "rm -rf tmp && mkdir tmp",
+    "deploy": "elm make src/Dashboard.elm --output=backend/dashboard.js && cp src/Main.elm backend/Main.elm && surge backend elm-code-explorer.surge.sh"
   },
   "author": "Erkal Selman, Peter Szerzo",
   "license": "MIT",

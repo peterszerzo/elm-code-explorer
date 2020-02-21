@@ -6,6 +6,7 @@ import Browser.Dom
 import Dashboard.Ast as Ast
 import Dashboard.Pos as Pos
 import Dashboard.Range as Range
+import Dashboard.Ui as Ui
 import Elm.Parser
 import Elm.Processing
 import Elm.Syntax.File
@@ -128,8 +129,9 @@ view model =
                 [ HA.class "container"
                 ]
                 [ Html.header [ HA.class "header" ]
-                    [ Html.p
-                        [ HA.class "header-logo"
+                    [ Ui.logo 24
+                    , Html.p
+                        [ HA.class "header-title"
                         ]
                         [ Html.text "Elm Code Explorer"
                         ]
@@ -145,7 +147,12 @@ view model =
                                     { content = Ast.NodeContent "File" Nothing 0
                                     , range = Nothing
                                     }
-                                    [ Ast.moduleDeclarationTree processed.moduleDefinition
+                                    [ Ast.moduleDefinitionTree processed.moduleDefinition
+                                    , Tree.Node
+                                        { content = Ast.NodeContent "Imports" Nothing 0
+                                        , range = Nothing
+                                        }
+                                        (List.map Ast.importDeclarationTree processed.imports)
                                     , Tree.Node
                                         { content = Ast.NodeContent "Declarations" Nothing 0
                                         , range = Nothing
@@ -289,7 +296,7 @@ findRange pos tree =
 fetchFile : (Result Http.Error String -> msg) -> Cmd msg
 fetchFile onResponse =
     Http.get
-        { url = "/file"
+        { url = "/Main.elm"
         , expect = Http.expectString onResponse
         }
 

@@ -1,8 +1,15 @@
-module Dashboard.Ast exposing (Node, NodeContent, declarationTree, moduleDeclarationTree)
+module Dashboard.Ast exposing
+    ( Node
+    , NodeContent
+    , declarationTree
+    , importDeclarationTree
+    , moduleDefinitionTree
+    )
 
 import Arborist.Tree as Tree
 import Dashboard.Range as Range
 import Elm.Syntax.Declaration
+import Elm.Syntax.Import
 import Elm.Syntax.Module
 import Elm.Syntax.Node
 
@@ -20,13 +27,22 @@ type alias Node =
     }
 
 
-moduleDeclarationTree :
+moduleDefinitionTree :
     Elm.Syntax.Node.Node Elm.Syntax.Module.Module
     -> Tree.Tree Node
-moduleDeclarationTree (Elm.Syntax.Node.Node range _) =
+moduleDefinitionTree (Elm.Syntax.Node.Node range _) =
     Tree.Node
         { range = Just range
         , content = NodeContent "Module" Nothing 1
+        }
+        []
+
+
+importDeclarationTree : Elm.Syntax.Node.Node Elm.Syntax.Import.Import -> Tree.Tree Node
+importDeclarationTree (Elm.Syntax.Node.Node range _) =
+    Tree.Node
+        { range = Just range
+        , content = NodeContent "Import" Nothing 1
         }
         []
 
