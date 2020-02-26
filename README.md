@@ -4,9 +4,9 @@ Dashboard for navigating Elm code and understanding the AST.
 
 ## Motivation
 
-If struggle to name pieces of code accurately (declaration, expression, literal et al.), or feel that inaccurate/inconsistent names hurt the quality of communication, you are not alone.
+If you struggle to name pieces of code accurately (declaration, expression, literal et al.), or feel that inaccurate/inconsistent names hurt the quality of communication with your peers, you are not alone.
 
-This little app helps shed some light on these finesses of Elm code: just click on a variable or function signature, navigate up and down the node of the corresponding AST, and enjoy some cross-highlighting. Check it out:
+This little app sheds some light on these naming finesses in Elm code: just click on a variable or function signature, navigate up and down the node of the corresponding AST, and enjoy some cross-highlighting. Check it out:
 
 ## How it works
 

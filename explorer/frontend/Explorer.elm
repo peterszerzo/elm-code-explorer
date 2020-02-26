@@ -11,6 +11,7 @@ import Explorer.Ast as Ast
 import Explorer.Pos as Pos
 import Explorer.Range as Range
 import Explorer.Ui as Ui
+import Explorer.Utils as Utils
 import Html
 import Html.Attributes as HA
 import Html.Events as HE
@@ -88,7 +89,7 @@ type Msg
         , height : Int
         }
     | SelectNode Bool (Maybe Ast.Node)
-    | ArrowPress ArrowDirection
+    | ArrowPress (Tree.Tree Ast.Node) ArrowDirection
 
 
 
@@ -96,9 +97,16 @@ type Msg
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Browser.Events.onKeyDown keyDecoder
-        |> Sub.map ArrowPress
+subscriptions model =
+    model.elmFile
+        |> Maybe.andThen Result.toMaybe
+        |> Maybe.andThen (process >> Result.toMaybe)
+        |> Maybe.map
+            (\tree ->
+                Browser.Events.onKeyDown keyDecoder
+                    |> Sub.map (ArrowPress (toTree tree))
+            )
+        |> Maybe.withDefault Sub.none
 
 
 type ArrowDirection
@@ -164,10 +172,24 @@ update msg model =
                     Cmd.none
             )
 
-        ArrowPress _ ->
-            ( model
-            , Cmd.none
-            )
+        ArrowPress tree arrow ->
+            case arrow of
+                ArrowUp ->
+                    ( { model
+                        | selectedNode =
+                            model.selectedNode
+                                |> Maybe.andThen
+                                    (\selectedNode ->
+                                        Utils.moveUpFrom selectedNode tree
+                                    )
+                      }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model
+                    , Cmd.none
+                    )
 
 
 view : Model -> Html.Html Msg
@@ -254,6 +276,28 @@ nodeId range =
         ++ String.fromInt range.end.row
 
 
+colorIndex : Ast.NodeCategory -> Int
+colorIndex category =
+    case category of
+        Ast.Literal ->
+            2
+
+        Ast.Definition ->
+            3
+
+        Ast.Declaration ->
+            4
+
+        Ast.Annotation ->
+            5
+
+        Ast.Action ->
+            1
+
+        Ast.Comment ->
+            0
+
+
 viewTree :
     { selectedNode : Maybe Ast.Node
     , onSelectNode : Maybe Ast.Node -> msg
@@ -266,6 +310,10 @@ viewTree config tree =
             Html.text ""
 
         Tree.Node node children ->
+            let
+                colorIndex_ =
+                    colorIndex node.content.category
+            in
             Html.div
                 [ HA.class "node-container"
                 ]
@@ -273,7 +321,7 @@ viewTree config tree =
                     ([ [ HA.classList
                             [ ( "node", True )
                             , ( "node--selectable", node.range /= Nothing )
-                            , ( "type-" ++ String.fromInt (modBy 6 node.content.colorIndex), True )
+                            , ( "type-" ++ String.fromInt (modBy 6 colorIndex_), True )
                             , ( "node--selected"
                               , config.selectedNode
                                     /= Nothing
@@ -378,21 +426,18 @@ process =
 toTree : Elm.Syntax.File.File -> Tree.Tree Ast.Node
 toTree processed =
     Tree.Node
-        { content = Ast.NodeContent "File" Nothing 0
+        { content = Ast.NodeContent "File" Nothing Ast.Definition
         , range = Nothing
         }
         [ Ast.moduleDefinitionTree processed.moduleDefinition
+        , Ast.importsDeclarationTree processed.imports
         , Tree.Node
-            { content = Ast.NodeContent "Imports" Nothing 0
-            , range = Nothing
-            }
-            (List.map Ast.importDeclarationTree processed.imports)
-        , Tree.Node
-            { content = Ast.NodeContent "Declarations" Nothing 0
+            { content = Ast.NodeContent "Declarations" Nothing Ast.Declaration
             , range = Nothing
             }
             (List.map Ast.declarationTree processed.declarations)
         ]
+        |> Ast.fillOutRanges
 
 
 
@@ -448,7 +493,7 @@ viewCode config =
                                                             [ ( "code-char--highlighted", True )
                                                             , ( "type-"
                                                                     ++ String.fromInt
-                                                                        (modBy 6 selectedNode.content.colorIndex)
+                                                                        (modBy 6 (colorIndex selectedNode.content.category))
                                                               , True
                                                               )
                                                             ]
@@ -463,13 +508,12 @@ viewCode config =
                                             ]
                                     )
                                 |> (\els ->
-                                        [ Html.span
+                                        Html.span
                                             [ HA.class "code-empty-char"
                                             ]
                                             [ Html.text (toStringWithPadding rowIndex)
                                             ]
-                                        ]
-                                            ++ els
+                                            :: els
                                    )
                             )
                     )

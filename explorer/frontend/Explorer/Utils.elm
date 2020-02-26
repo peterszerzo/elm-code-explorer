@@ -11,10 +11,23 @@ moveUpFrom baseNode tree =
 
         Tree.Node node children ->
             if baseNode == node then
-                Nothing
+                Just baseNode
 
-            else if List.any (\_ -> False) children then
+            else if
+                List.any
+                    (\childTree ->
+                        case childTree of
+                            Tree.Node childNode _ ->
+                                childNode == baseNode
+
+                            _ ->
+                                False
+                    )
+                    children
+            then
                 Just node
 
             else
-                Nothing
+                children
+                    |> List.filterMap (moveUpFrom baseNode)
+                    |> List.head
