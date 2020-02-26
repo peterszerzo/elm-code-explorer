@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node explorer/backend/index.js",
     "postinstall": "rm -rf tmp && mkdir tmp",
-    "deploy": "elm make explorer/frontend/Explorer.elm --output=explorer/explorer.js && cp src/Main.elm backend/Main.elm && surge explorer elm-code-explorer.surge.sh"
+    "deploy": "elm make explorer/frontend/Explorer.elm --output=explorer/explorer.js && cp src/Main.elm explorer/Main.elm && surge explorer elm-code-explorer.surge.sh"
   },
   "author": "Peter Szerzo, Erkal Selman",
   "license": "MIT",

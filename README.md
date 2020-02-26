@@ -8,6 +8,8 @@ If you struggle to name pieces of code accurately (declaration, expression, lite
 
 This little app sheds some light on these naming finesses in Elm code: just click on a variable or function signature, navigate up and down the node of the corresponding AST, and enjoy some cross-highlighting. Check it out:
 
+![Code Explorer Example](assets/elm-code-explorer.gif)
+
 ## How it works
 
 This is a regular Elm setup with a [src/Main.elm](src/Main.elm) entry point. You can edit and run this file with the build tool of your choosing. However, you can also explore the AST of this file by running `npm install` and `npm start`, which spins up a Node server that serves the Elm app defined in the `./explorer` folder.
