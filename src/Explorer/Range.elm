@@ -1,6 +1,6 @@
-module Dashboard.Range exposing (Range, inside)
+module Explorer.Range exposing (Range, inside)
 
-import Dashboard.Pos as Pos
+import Explorer.Pos as Pos
 
 
 type alias Range =

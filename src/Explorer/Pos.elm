@@ -1,4 +1,4 @@
-module Dashboard.Pos exposing (Pos)
+module Explorer.Pos exposing (Pos)
 
 
 type alias Pos =

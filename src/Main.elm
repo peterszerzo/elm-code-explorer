@@ -8,6 +8,8 @@ name =
     "Paul"
 
 
+{-| Format greeting
+-}
 greeting : String
 greeting =
     "Hello, " ++ name

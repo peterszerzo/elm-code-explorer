@@ -9,8 +9,15 @@ ${window.elmError}
 `;
 
 if (window.Elm) {
-  Elm.Dashboard.init({
+  const app = Elm.Explorer.init({
     node
+  });
+
+  app.ports.scrollIntoView.subscribe(msg => {
+    const node = document.querySelector(`#${msg}`);
+    node.scrollIntoView({
+      behavior: "smooth"
+    });
   });
 } else {
   node.innerHTML = errorTemplate;

@@ -1,4 +1,4 @@
-module Dashboard.Ui exposing (logo)
+module Explorer.Ui exposing (logo)
 
 import Html
 import Svg

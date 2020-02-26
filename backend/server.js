@@ -12,16 +12,16 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/dashboard.js", (req, res) => {
+app.get("/explorer.js", (req, res) => {
   exec(
-    "rm -rf tmp/dashboard.js && elm make src/Dashboard.elm --output=tmp/dashboard.js",
+    "rm -rf tmp/explorer.js && elm make src/Explorer.elm --output=tmp/explorer.js",
     (stderr, err, result) => {
       if (stderr) {
         res.send(`window.elmError = ${JSON.stringify(result)};`);
         return;
       }
       fs.readFile(
-        path.join(__dirname, "../tmp/dashboard.js"),
+        path.join(__dirname, "../tmp/explorer.js"),
         "utf8",
         (err, file) => {
           res.send(file);

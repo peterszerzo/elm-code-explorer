@@ -1,4 +1,4 @@
-module Dashboard.Ast exposing
+module Explorer.Ast exposing
     ( Node
     , NodeContent
     , declarationTree
@@ -7,11 +7,12 @@ module Dashboard.Ast exposing
     )
 
 import Arborist.Tree as Tree
-import Dashboard.Range as Range
 import Elm.Syntax.Declaration
+import Elm.Syntax.Expression
 import Elm.Syntax.Import
 import Elm.Syntax.Module
 import Elm.Syntax.Node
+import Explorer.Range as Range
 
 
 type alias NodeContent =
@@ -47,6 +48,44 @@ importDeclarationTree (Elm.Syntax.Node.Node range _) =
         []
 
 
+expressionTree : Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression -> Tree.Tree Node
+expressionTree (Elm.Syntax.Node.Node expressionRange expression) =
+    case expression of
+        Elm.Syntax.Expression.Application expressions ->
+            Tree.Node
+                { range = Just expressionRange
+                , content = NodeContent "Application" Nothing 3
+                }
+                (List.map expressionTree expressions)
+
+        Elm.Syntax.Expression.FunctionOrValue parts name ->
+            Tree.Node
+                { range = Just expressionRange
+                , content =
+                    NodeContent "Value"
+                        (parts
+                            ++ [ name ]
+                            |> String.join "."
+                            |> Just
+                        )
+                        3
+                }
+                []
+
+        Elm.Syntax.Expression.Literal str ->
+            Tree.Node
+                { range = Just expressionRange
+                , content =
+                    NodeContent "String Literal"
+                        (Just <| "\"" ++ str ++ "\"")
+                        3
+                }
+                []
+
+        _ ->
+            Tree.Empty
+
+
 declarationTree :
     Elm.Syntax.Node.Node Elm.Syntax.Declaration.Declaration
     -> Tree.Tree Node
@@ -57,7 +96,20 @@ declarationTree (Elm.Syntax.Node.Node range content) =
                 { range = Just range
                 , content = NodeContent "FunctionDeclaration" Nothing 1
                 }
-                ([ function.signature
+                ([ function.documentation
+                    |> Maybe.map
+                        (\documentationNode ->
+                            let
+                                (Elm.Syntax.Node.Node currentRange _) =
+                                    documentationNode
+                            in
+                            Tree.Node
+                                { range = Just currentRange
+                                , content = NodeContent "Documentation" Nothing 4
+                                }
+                                []
+                        )
+                 , function.signature
                     |> Maybe.map
                         (\signatureNode ->
                             let
@@ -66,6 +118,9 @@ declarationTree (Elm.Syntax.Node.Node range content) =
 
                                 (Elm.Syntax.Node.Node nameRange name) =
                                     signature.name
+
+                                (Elm.Syntax.Node.Node typeAnnotationRange _) =
+                                    signature.typeAnnotation
                             in
                             Tree.Node
                                 { range = Just signatureRange
@@ -76,8 +131,11 @@ declarationTree (Elm.Syntax.Node.Node range content) =
                                     , content = NodeContent "FunctionName" (Just name) 5
                                     }
                                     []
-
-                                -- TODO: parse type signature
+                                , Tree.Node
+                                    { range = Just typeAnnotationRange
+                                    , content = NodeContent "Type Annotation" Nothing 5
+                                    }
+                                    []
                                 ]
                         )
                  , let
@@ -88,15 +146,7 @@ declarationTree (Elm.Syntax.Node.Node range content) =
                     { range = Just implementationRange
                     , content = NodeContent "Implementation" Nothing 3
                     }
-                    [ let
-                        (Elm.Syntax.Node.Node expressionRange expression) =
-                            implementation.expression
-                      in
-                      Tree.Node
-                        { range = Just expressionRange
-                        , content = NodeContent "Expression" Nothing 2
-                        }
-                        []
+                    [ expressionTree implementation.expression
                     ]
                     |> Just
                  ]

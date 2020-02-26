@@ -8,7 +8,7 @@
     "postinstall": "rm -rf tmp && mkdir tmp",
     "deploy": "elm make src/Dashboard.elm --output=backend/dashboard.js && cp src/Main.elm backend/Main.elm && surge backend elm-code-explorer.surge.sh"
   },
-  "author": "Erkal Selman, Peter Szerzo",
+  "author": "Peter Szerzo, Erkal Selman",
   "license": "MIT",
   "dependencies": {
     "elm": "^0.19.1-3",
