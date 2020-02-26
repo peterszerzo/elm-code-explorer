@@ -186,6 +186,18 @@ update msg model =
                     , Cmd.none
                     )
 
+                ArrowDown ->
+                    ( { model
+                        | selectedNode =
+                            model.selectedNode
+                                |> Maybe.andThen
+                                    (\selectedNode ->
+                                        Utils.moveDownFrom selectedNode tree
+                                    )
+                      }
+                    , Cmd.none
+                    )
+
                 _ ->
                     ( model
                     , Cmd.none
